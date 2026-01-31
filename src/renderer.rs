@@ -46,7 +46,6 @@ pub fn render(nodes: &[Node]) -> String {
 
             // List rendering
             Node::List { kind, items } => {
-                // 1. List turiga qarab teg tanlaymiz
                 let tag = match kind {
                     ListType::Ordered => "ol",
                     ListType::Unordered => "ul",
@@ -57,7 +56,6 @@ pub fn render(nodes: &[Node]) -> String {
                 for item in items {
                     html.push_str("  <li>");
 
-                    // 2. Checkbox bo'lsa, uni kontentdan oldin chiqaramiz
                     if let Some(checked) = item.checked {
                         let check_attr = if checked { "checked" } else { "" };
                         html.push_str(&format!(
@@ -66,17 +64,12 @@ pub fn render(nodes: &[Node]) -> String {
                         ));
                     }
 
-                    // 3. Asosiy matnni render qilamiz (Text, Bold, Link va h.k.)
                     html.push_str(&render(&item.content));
 
-                    // 4. MUHIM: Agar ichki (nested) listlar bo'lsa,
-                    // ularni <li> yopilishidan oldin rekursiv render qilamiz
                     if !item.children.is_empty() {
                         html.push('\n');
-                        // Bu yerda yana render() chaqiriladi va u yangi <ol>/<ul> ochadi
                         let child_html = render(&item.children);
 
-                        // Ichki list chiroyli ko'rinishi uchun har bir qatorni suramiz (tabulation)
                         for line in child_html.lines() {
                             html.push_str(&format!("    {}\n", line));
                         }
@@ -139,7 +132,6 @@ pub fn render(nodes: &[Node]) -> String {
                 let mut attr_str = String::new();
 
                 for (key, val) in attributes {
-                    // HTML xavfsizligi uchun attribute shakliga keltiramiz
                     attr_str.push_str(&format!(" data-{}='{}'", key, val));
                 }
 

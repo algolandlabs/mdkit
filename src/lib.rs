@@ -17,6 +17,5 @@ pub fn markdown_to_ast(input: &str) -> JsValue {
     let mut parser = crate::parser::Parser::new(input);
     let nodes = parser.parse_document();
 
-    // JS ob'ektiga aylantirish
     to_value(&nodes).unwrap_or(JsValue::NULL)
 }

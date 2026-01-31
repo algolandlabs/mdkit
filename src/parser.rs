@@ -145,39 +145,34 @@ impl Parser {
                     content: code_content,
                 });
             } else if self.starts_with("![") {
-                // IMAGE: ![alt](url)
                 self.flush_text(&mut text_acc, &mut nodes);
-                self.consume(2); // "![" ni o'tkazib yuboramiz
+                self.consume(2);
 
                 let alt = self.read_until(']');
 
                 if self.peek() == '(' {
-                    self.consume(1); // "(" ni o'tkazib yuboramiz
+                    self.consume(1);
                     let url = self.read_until(')');
                     nodes.push(Node::Image { alt, url });
                 } else {
-                    // Agar ( bo'lmasa, bu rasm emas, oddiy matn deb hisoblaymiz
                     text_acc.push_str(&format!("![{}", alt));
                 }
             } else if self.peek() == '[' {
-                // LINK: [text](url)
                 self.flush_text(&mut text_acc, &mut nodes);
-                self.consume(1); // "[" ni o'tkazib yuboramiz
+                self.consume(1);
 
                 let link_text_raw = self.read_until(']');
 
                 if self.peek() == '(' {
-                    self.consume(1); // "(" ni o'tkazib yuboramiz
+                    self.consume(1);
                     let url = self.read_until(')');
 
-                    // Link ichidagi matnni ham parse qilamiz (masalan, [**bold** link](url))
                     let mut sub_parser = Parser::new(&link_text_raw);
                     nodes.push(Node::Link {
                         text: sub_parser.parse_inline_elements('\0'),
                         url,
                     });
                 } else {
-                    // Agar ( bo'lmasa, bu shunchaki qavs ichidagi matn
                     text_acc.push_str(&format!("[{}", link_text_raw));
                 }
             }
@@ -195,7 +190,6 @@ impl Parser {
     /// Heading parser
     /// # Heading 1
     fn parse_heading(&mut self) -> Node {
-        /* Avvalgi javobdagi bilan bir xil */
         let mut level = 0;
         while self.peek() == '#' {
             level += 1;
@@ -219,26 +213,20 @@ impl Parser {
     /// 1. Item 1
     /// 2. Item 2
     fn parse_list(&mut self, base_indent: usize) -> Node {
-        let initial_kind = self.identify_list_type(); // Birinchi qator turini aniqlaymiz
+        let initial_kind = self.identify_list_type();
         let mut items: Vec<ListItem> = Vec::new();
 
         while !self.is_eof() {
             let raw_line = self.peek_line();
+
             if raw_line.trim().is_empty() {
+                self.read_line();
                 break;
             }
 
             let (indent, trimmed_line) = self.get_line_indentation(&raw_line);
 
-            // MUHIM: Agar joriy qator turi boshlang'ich turdan farq qilsa, listni yopamiz
-            if indent == base_indent {
-                let current_kind = self.identify_list_type();
-                if current_kind != initial_kind {
-                    break; // Ordered list tugadi, endi Unordered boshlanishi kerak
-                }
-            }
-
-            if indent < base_indent || !self.is_list_line(&trimmed_line) {
+            if indent < base_indent {
                 break;
             }
 
@@ -246,12 +234,23 @@ impl Parser {
                 if let Some(last_item) = items.last_mut() {
                     last_item.children.push(self.parse_list(indent));
                     continue;
+                } else {
+                    self.read_line();
+                    continue;
                 }
             }
 
-            self.read_line(); // Marker bor qatorni yeymiz
+            if !self.is_list_line(&trimmed_line) {
+                break;
+            }
 
-            // Markerlarni (1. yoki -) tozalash
+            let current_kind = self.identify_list_type();
+            if current_kind != initial_kind && indent == base_indent {
+                break;
+            }
+
+            self.read_line();
+
             let clean_content = self.clean_marker(&trimmed_line, initial_kind.clone());
             let (checked, final_text) = self.extract_checkbox(&clean_content);
 
@@ -280,7 +279,6 @@ impl Parser {
             inner_content.push('\n');
             self.skip_whitespace_inline();
         }
-        // Ichki Markdownni qayta parse qilish (Nested support)
         let mut sub_parser = Parser::new(&inner_content);
         Node::BlockQuote {
             children: sub_parser.parse_document(),
@@ -371,19 +369,16 @@ impl Parser {
     /// content
     /// :::
     fn parse_custom_block(&mut self) -> Node {
-        self.consume(3); // ::: yeymiz
+        self.consume(3);
 
         let header = self.read_line();
         let mut parts = header.split_whitespace();
 
-        // Birinchi so'z - label (masalan: tab)
         let name = parts.next().unwrap_or("").to_string();
 
-        // Qolganlari - attributlar (title="My Title" disabled=false)
         let mut attributes = HashMap::new();
         for part in parts {
             if let Some((key, value)) = part.split_once('=') {
-                // Qo'shtirnoqlarni olib tashlaymiz: "title" -> title
                 let clean_value = value.trim_matches('"').to_string();
                 attributes.insert(key.to_string(), clean_value);
             }
@@ -392,16 +387,8 @@ impl Parser {
         let mut inner_content = String::new();
         let mut nest_level = 1;
 
-        // To'g'ri yopuvchi ::: ni topish uchun loop
         while !self.is_eof() && nest_level > 0 {
             if self.starts_with(":::") {
-                // Ichkarida yana blok ochilsa (masalan :::tab), uni kontentga qo'shamiz
-                // Lekin bizning asosiy blokimiz qachon tugashini bilishimiz kerak
-                // Buning uchun kelayotgan satrni tekshiramiz
-                // let peek_pos = self.pos + 3;
-                // Agar ::: dan keyin matn bo'lsa, bu yangi ichki blok (nest_level++)
-                // Agar ::: dan keyin darhol yangi qator bo'lsa, bu yopuvchi blok (nest_level--)
-
                 let remaining = &self.input[self.pos..];
                 let line = remaining
                     .iter()
@@ -415,11 +402,10 @@ impl Parser {
                         self.consume(3);
                         self.consume_if('\n');
                     } else {
-                        self.consume(3); // Asosiy blok yopildi
+                        self.consume(3);
                         self.consume_if('\n');
                     }
                 } else {
-                    // Bu ichki blok ochilishi: :::tab
                     nest_level += 1;
                     inner_content.push_str(&line);
                     inner_content.push('\n');
@@ -431,7 +417,6 @@ impl Parser {
             }
         }
 
-        // Ichki kontentni yangi parser bilan rekursiv parse qilamiz
         let mut sub_parser = Parser::new(&inner_content);
         Node::CustomBlock {
             name,
@@ -589,17 +574,22 @@ impl Parser {
         line.contains('|') && line.trim().starts_with('|')
     }
 
-    // Qator ro'yxat ekanini tekshirish (- , * , 1. )
     fn is_list_line(&self, line: &str) -> bool {
         let trimmed = line.trim_start();
-        trimmed.starts_with("- ")
-            || trimmed.starts_with("* ")
-            || (trimmed.len() > 2
-                && trimmed.chars().next().unwrap().is_ascii_digit()
-                && trimmed.contains(". "))
+        if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+            return true;
+        }
+
+        if let Some(dot_pos) = trimmed.find('.') {
+            let prefix = &trimmed[..dot_pos];
+            if !prefix.is_empty() && prefix.chars().all(|c| c.is_ascii_digit()) {
+                let after_dot = trimmed.get(dot_pos + 1..dot_pos + 2);
+                return after_dot.is_none() || after_dot == Some(" ");
+            }
+        }
+        false
     }
 
-    // Ro'yxat turini aniqlash
     fn identify_list_type(&self) -> crate::ast::ListType {
         let line = self.peek_line().trim_start().to_string();
         if line.starts_with("- ") || line.starts_with("* ") {
@@ -609,13 +599,11 @@ impl Parser {
         }
     }
 
-    // Qator boshidagi bo'shliqlarni sanash va toza qatorni qaytarish
     fn get_line_indentation(&self, line: &str) -> (usize, String) {
         let indent = line.chars().take_while(|c| c.is_whitespace()).count();
         (indent, line.trim().to_string())
     }
 
-    // Checkboxni ajratib olish: [x] Task -> (Some(true), "Task")
     fn extract_checkbox(&self, line: &str) -> (Option<bool>, String) {
         if line.starts_with("[ ] ") {
             (Some(false), line[4..].to_string())
@@ -626,11 +614,9 @@ impl Parser {
         }
     }
 
-    // Markerlarni tozalash: "1. Item" -> "Item"
     fn clean_marker(&self, line: &str, kind: ListType) -> String {
         match kind {
             ListType::Unordered => {
-                // "- " yoki "* " ni kesib tashlaymiz (2 ta belgi)
                 if line.starts_with("- ") || line.starts_with("* ") {
                     line[2..].to_string()
                 } else {
@@ -638,7 +624,6 @@ impl Parser {
                 }
             }
             ListType::Ordered => {
-                // "1. " kabi raqamli markerlarni kesamiz
                 if let Some(dot_pos) = line.find(". ") {
                     line[dot_pos + 2..].to_string()
                 } else {
@@ -653,7 +638,7 @@ impl Parser {
         while !self.is_eof() && self.peek() != stop_char {
             result.push(self.next_char());
         }
-        self.consume_if(stop_char); // Yopuvchi qavsni ( ] yoki ) ) yeymiz
+        self.consume_if(stop_char);
         result
     }
 }

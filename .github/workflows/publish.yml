@@ -1,0 +1,32 @@
+name: Rust WASM CI/CD
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    test-and-publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Run Rust Tests
+              run: cargo test
+
+            - name: Install wasm-pack
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+            - name: Build WASM
+              run: wasm-pack build --target bundler
+
+            - name: Publish to NPM
+              if: success()
+              run: |
+                  cd pkg
+                  echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > .npmrc
+                  npm publish --access public
+              env:
+                  NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

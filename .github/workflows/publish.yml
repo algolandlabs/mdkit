@@ -21,12 +21,3 @@ jobs:
 
             - name: Build WASM
               run: wasm-pack build --target bundler
-
-            - name: Publish to NPM
-              if: success()
-              run: |
-                  cd pkg
-                  echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > .npmrc
-                  npm publish --access public
-              env:
-                  NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

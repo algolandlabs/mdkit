@@ -1,25 +1,28 @@
+use serde::Serialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ListType {
     Ordered,
     Unordered,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListItem {
     pub content: Vec<Node>,
     pub children: Vec<Node>,
     pub checked: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TableCell {
     pub children: Vec<Node>,
     pub alignment: TableAlignment,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum TableAlignment {
     Left,
     Center,
@@ -27,7 +30,8 @@ pub enum TableAlignment {
     None,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Node {
     Heading {
         level: usize,
@@ -36,7 +40,9 @@ pub enum Node {
     },
     HorizontalRule,
 
-    Paragraph(Vec<Node>),
+    Paragraph {
+        children: Vec<Node>,
+    },
     LineBreak,
 
     Link {
@@ -48,23 +54,41 @@ pub enum Node {
         url: String,
     },
 
-    Bold(Vec<Node>),
-    Italic(Vec<Node>),
-    Strikethrough(Vec<Node>),
-    Underline(Vec<Node>),
-    Text(String),
+    Bold {
+        children: Vec<Node>,
+    },
+    Italic {
+        children: Vec<Node>,
+    },
+    Strikethrough {
+        children: Vec<Node>,
+    },
+    Underline {
+        children: Vec<Node>,
+    },
+    Text {
+        content: String,
+    },
 
-    InlineMath(String),
-    BlockMath(String),
+    InlineMath {
+        content: String,
+    },
+    BlockMath {
+        content: String,
+    },
 
-    InlineCode(String),
+    InlineCode {
+        content: String,
+    },
     CodeBlock {
         lang: String,
         filename: Option<String>,
         code: String,
     },
 
-    BlockQuote(Vec<Node>),
+    BlockQuote {
+        children: Vec<Node>,
+    },
     List {
         kind: ListType,
         items: Vec<ListItem>,

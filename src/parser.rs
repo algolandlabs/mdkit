@@ -63,7 +63,7 @@ impl Parser {
             else {
                 let inline = self.parse_inline_elements('\n');
                 self.consume_if('\n');
-                nodes.push(Node::Paragraph(inline));
+                nodes.push(Node::Paragraph { children: inline });
             }
         }
         nodes
@@ -100,7 +100,9 @@ impl Parser {
                 self.consume(3);
                 let inner = self.parse_inline_elements('*');
                 self.consume_repeated('*', 3);
-                nodes.push(Node::Bold(vec![Node::Italic(inner)]));
+                nodes.push(Node::Bold {
+                    children: vec![Node::Italic { children: inner }],
+                });
             }
             // Bold, Underline, Strike
             else if self.starts_with("**") {
@@ -108,19 +110,19 @@ impl Parser {
                 self.consume(2);
                 let inner = self.parse_inline_elements('*');
                 self.consume_repeated('*', 2);
-                nodes.push(Node::Bold(inner));
+                nodes.push(Node::Bold { children: inner });
             } else if self.starts_with("__") {
                 self.flush_text(&mut text_acc, &mut nodes);
                 self.consume(2);
                 let inner = self.parse_inline_elements('_');
                 self.consume_repeated('_', 2);
-                nodes.push(Node::Underline(inner));
+                nodes.push(Node::Underline { children: inner });
             } else if self.starts_with("~~") {
                 self.flush_text(&mut text_acc, &mut nodes);
                 self.consume(2);
                 let inner = self.parse_inline_elements('~');
                 self.consume_repeated('~', 2);
-                nodes.push(Node::Strikethrough(inner));
+                nodes.push(Node::Strikethrough { children: inner });
             }
             // Single italic *
             else if ch == '*' {
@@ -128,7 +130,7 @@ impl Parser {
                 self.consume(1);
                 let inner = self.parse_inline_elements('*');
                 self.consume_if('*');
-                nodes.push(Node::Italic(inner));
+                nodes.push(Node::Italic { children: inner });
             } else if ch == '`' {
                 self.flush_text(&mut text_acc, &mut nodes);
                 self.consume(1);
@@ -139,7 +141,9 @@ impl Parser {
                 }
 
                 self.consume_if('`');
-                nodes.push(Node::InlineCode(code_content));
+                nodes.push(Node::InlineCode {
+                    content: code_content,
+                });
             } else if self.starts_with("![") {
                 // IMAGE: ![alt](url)
                 self.flush_text(&mut text_acc, &mut nodes);
@@ -278,7 +282,9 @@ impl Parser {
         }
         // Ichki Markdownni qayta parse qilish (Nested support)
         let mut sub_parser = Parser::new(&inner_content);
-        Node::BlockQuote(sub_parser.parse_document())
+        Node::BlockQuote {
+            children: sub_parser.parse_document(),
+        }
     }
 
     /// Code block parser
@@ -343,7 +349,9 @@ impl Parser {
         if self.starts_with("$$") {
             self.consume(2);
         }
-        Node::BlockMath(content.trim().to_string())
+        Node::BlockMath {
+            content: content.trim().to_string(),
+        }
     }
 
     /// Inline math parser
@@ -355,7 +363,7 @@ impl Parser {
             content.push(self.next_char());
         }
         self.consume_if('$');
-        Node::InlineMath(content)
+        Node::InlineMath { content: content }
     }
 
     /// Custom block parser
@@ -506,11 +514,16 @@ impl Parser {
         let mut text = String::new();
         for node in nodes {
             match node {
-                Node::Text(t) => text.push_str(t),
-                Node::Bold(c) | Node::Italic(c) | Node::Underline(c) | Node::Strikethrough(c) => {
+                Node::Text { content: t } => text.push_str(t),
+                Node::Bold { children: c }
+                | Node::Italic { children: c }
+                | Node::Underline { children: c }
+                | Node::Strikethrough { children: c } => {
                     text.push_str(&self.extract_plain_text(c));
                 }
-                Node::InlineCode(c) | Node::InlineMath(c) => text.push_str(c),
+                Node::InlineCode { content: c } | Node::InlineMath { content: c } => {
+                    text.push_str(c)
+                }
                 _ => {}
             }
         }
@@ -525,7 +538,9 @@ impl Parser {
 
     fn flush_text(&self, text: &mut String, nodes: &mut Vec<Node>) {
         if !text.is_empty() {
-            nodes.push(Node::Text(text.drain(..).collect()));
+            nodes.push(Node::Text {
+                content: text.drain(..).collect(),
+            });
         }
     }
 

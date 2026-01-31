@@ -1,5 +1,16 @@
 /**
  * @param {string} input
+ * @returns {any}
+ */
+export function markdown_to_ast(input) {
+    const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.markdown_to_ast(ptr0, len0);
+    return ret;
+}
+
+/**
+ * @param {string} input
  * @returns {string}
  */
 export function markdown_to_html(input) {
@@ -15,6 +26,54 @@ export function markdown_to_html(input) {
     } finally {
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
+}
+export function __wbg_Error_8c4e43fe74559d73(arg0, arg1) {
+    const ret = Error(getStringFromWasm0(arg0, arg1));
+    return ret;
+}
+export function __wbg___wbindgen_is_string_cd444516edc5b180(arg0) {
+    const ret = typeof(arg0) === 'string';
+    return ret;
+}
+export function __wbg___wbindgen_throw_be289d5034ed271b(arg0, arg1) {
+    throw new Error(getStringFromWasm0(arg0, arg1));
+}
+export function __wbg_new_361308b2356cecd0() {
+    const ret = new Object();
+    return ret;
+}
+export function __wbg_new_3eb36ae241fe6f44() {
+    const ret = new Array();
+    return ret;
+}
+export function __wbg_new_dca287b076112a51() {
+    const ret = new Map();
+    return ret;
+}
+export function __wbg_set_1eb0999cf5d27fc8(arg0, arg1, arg2) {
+    const ret = arg0.set(arg1, arg2);
+    return ret;
+}
+export function __wbg_set_3f1d0b984ed272ed(arg0, arg1, arg2) {
+    arg0[arg1] = arg2;
+}
+export function __wbg_set_f43e577aea94465b(arg0, arg1, arg2) {
+    arg0[arg1 >>> 0] = arg2;
+}
+export function __wbindgen_cast_0000000000000001(arg0) {
+    // Cast intrinsic for `F64 -> Externref`.
+    const ret = arg0;
+    return ret;
+}
+export function __wbindgen_cast_0000000000000002(arg0, arg1) {
+    // Cast intrinsic for `Ref(String) -> Externref`.
+    const ret = getStringFromWasm0(arg0, arg1);
+    return ret;
+}
+export function __wbindgen_cast_0000000000000003(arg0) {
+    // Cast intrinsic for `U64 -> Externref`.
+    const ret = BigInt.asUintN(64, arg0);
+    return ret;
 }
 export function __wbindgen_init_externref_table() {
     const table = wasm.__wbindgen_externrefs;

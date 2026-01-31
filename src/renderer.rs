@@ -31,7 +31,7 @@ pub fn render(nodes: &[Node]) -> String {
             }
 
             // Paragraph rendering
-            Node::Paragraph(children) => {
+            Node::Paragraph { children } => {
                 html.push_str(&format!("<p>{}</p>\n", render(children)));
             }
 
@@ -89,12 +89,12 @@ pub fn render(nodes: &[Node]) -> String {
             }
 
             // Blockquote rendering
-            Node::BlockQuote(content) => {
+            Node::BlockQuote { children: content } => {
                 html.push_str(&format!("<blockquote>\n{}</blockquote>\n", render(content)));
             }
 
             // Block math rendering
-            Node::BlockMath(math) => {
+            Node::BlockMath { content: math } => {
                 html.push_str(&format!("<div class='math-block'>\\[ {} \\]</div>\n", math));
             }
 
@@ -163,30 +163,30 @@ pub fn render(nodes: &[Node]) -> String {
             }
 
             // Text rendering
-            Node::Text(t) => html.push_str(t),
+            Node::Text { content: t } => html.push_str(t),
 
             // Bold rendering
-            Node::Bold(children) => {
+            Node::Bold { children } => {
                 html.push_str(&format!("<strong>{}</strong>", render(children)));
             }
 
             // Italic rendering
-            Node::Italic(chidlren) => {
-                html.push_str(&format!("<em>{}</em>", render(chidlren)));
+            Node::Italic { children } => {
+                html.push_str(&format!("<em>{}</em>", render(children)));
             }
 
             // Strikethrough rendering
-            Node::Strikethrough(children) => {
+            Node::Strikethrough { children } => {
                 html.push_str(&format!("<del>{}</del>", render(children)));
             }
 
             // Underline rendering
-            Node::Underline(children) => {
+            Node::Underline { children } => {
                 html.push_str(&format!("<u>{}</u>", render(children)));
             }
 
             // Inline math rendering
-            Node::InlineMath(math) => {
+            Node::InlineMath { content: math } => {
                 html.push_str(&format!(
                     "<span class='math-inline'>\\( {} \\)</span>",
                     math
@@ -194,7 +194,7 @@ pub fn render(nodes: &[Node]) -> String {
             }
 
             // Code span rendering
-            Node::InlineCode(code) => {
+            Node::InlineCode { content: code } => {
                 html.push_str(&format!("<code>{}</code>", code));
             }
         }

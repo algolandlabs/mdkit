@@ -1,17 +1,17 @@
 {
-  "name": "@algolandlabs/mdkit",
-  "type": "module",
-  "version": "0.1.0",
-  "files": [
-    "mdkit_bg.wasm",
-    "mdkit.js",
-    "mdkit_bg.js",
-    "mdkit.d.ts"
-  ],
-  "main": "mdkit.js",
-  "types": "mdkit.d.ts",
-  "sideEffects": [
-    "./mdkit.js",
-    "./snippets/*"
-  ]
+	"name": "@algolandlabs/mdkit",
+	"type": "module",
+	"version": "0.1.0",
+	"files": [
+		"mdkit_bg.wasm",
+		"mdkit.js",
+		"mdkit_bg.js",
+		"mdkit.d.ts"
+	],
+	"main": "mdkit.js",
+	"types": "mdkit.d.ts",
+	"sideEffects": [
+		"./mdkit.js",
+		"./snippets/*"
+	]
 }

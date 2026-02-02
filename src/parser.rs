@@ -18,6 +18,8 @@ impl Parser {
     pub fn parse_document(&mut self) -> Vec<Node> {
         let mut nodes = Vec::new();
         while !self.is_eof() {
+            let start_pos = self.pos;
+
             self.skip_empty_lines();
             if self.is_eof() {
                 break;
@@ -52,18 +54,35 @@ impl Parser {
             else if self.is_table_start() {
                 if let Some(table) = self.parse_table() {
                     nodes.push(table);
+                } else {
+                    let line = self.read_line();
+                    nodes.push(Node::Paragraph {
+                        children: vec![Node::Text { content: line }],
+                    });
                 }
             }
             // List parsing
             else if self.is_list_start() {
-                nodes.push(self.parse_list(0));
-                continue;
+                let line = self.peek_line();
+                let (indent, _) = self.get_line_indentation(&line);
+
+                nodes.push(self.parse_list(indent));
             }
             // inline elements
             else {
                 let inline = self.parse_inline_elements('\n');
                 self.consume_if('\n');
                 nodes.push(Node::Paragraph { children: inline });
+            }
+
+            if self.pos <= start_pos {
+                let fallback = self.read_line();
+                if !fallback.trim().is_empty() {
+                    nodes.push(Node::Text { content: fallback });
+                } else {
+                    println!("This is else block");
+                    break;
+                }
             }
         }
         nodes
@@ -219,6 +238,7 @@ impl Parser {
         while !self.is_eof() {
             let raw_line = self.peek_line();
 
+            // empty line
             if raw_line.trim().is_empty() {
                 self.read_line();
                 break;
@@ -228,15 +248,28 @@ impl Parser {
 
             if indent < base_indent {
                 break;
-            }
-
-            if indent > base_indent {
+            } else if indent > base_indent {
+                println!("indent > base_indent");
                 if let Some(last_item) = items.last_mut() {
-                    last_item.children.push(self.parse_list(indent));
+                    if self.is_list_line(&trimmed_line) {
+                        last_item.children.push(self.parse_list(indent));
+                    } else {
+                        self.read_line();
+                        let mut p = Parser::new(trimmed_line.trim());
+                        let mut extra_content = p.parse_inline_elements('\0');
+                        last_item.content.push(Node::LineBreak);
+                        last_item.content.append(&mut extra_content);
+                    }
                     continue;
                 } else {
-                    self.read_line();
-                    continue;
+                    if let Some(last_item) = items.last_mut() {
+                        self.read_line();
+                        let mut p = Parser::new(trimmed_line.trim());
+                        let mut extra_content = p.parse_inline_elements('\0');
+                        last_item.content.push(Node::LineBreak);
+                        last_item.content.append(&mut extra_content);
+                        continue;
+                    }
                 }
             }
 
@@ -561,12 +594,14 @@ impl Parser {
     }
 
     fn is_list_start(&self) -> bool {
-        let line = self.peek_line().trim_start().to_string();
-        line.starts_with("- ")
-            || line.starts_with("* ")
-            || (line.len() > 2
-                && line.chars().next().unwrap().is_ascii_digit()
-                && line.contains(". "))
+        let line = self.peek_line();
+        let trimmed = line.trim_start();
+
+        trimmed.starts_with("- ")
+            || trimmed.starts_with("* ")
+            || trimmed.starts_with("+ ")
+            || (trimmed.chars().next().map_or(false, |c| c.is_ascii_digit())
+                && trimmed.contains(". "))
     }
 
     fn is_table_start(&self) -> bool {
@@ -576,7 +611,7 @@ impl Parser {
 
     fn is_list_line(&self, line: &str) -> bool {
         let trimmed = line.trim_start();
-        if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+        if trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("+ ") {
             return true;
         }
 
@@ -587,12 +622,15 @@ impl Parser {
                 return after_dot.is_none() || after_dot == Some(" ");
             }
         }
+
+        println!("Return falce");
         false
     }
 
     fn identify_list_type(&self) -> crate::ast::ListType {
         let line = self.peek_line().trim_start().to_string();
-        if line.starts_with("- ") || line.starts_with("* ") {
+        println!("Line: {}", line);
+        if line.starts_with("- ") || line.starts_with("* ") || line.starts_with("+ ") {
             crate::ast::ListType::Unordered
         } else {
             crate::ast::ListType::Ordered
@@ -617,7 +655,8 @@ impl Parser {
     fn clean_marker(&self, line: &str, kind: ListType) -> String {
         match kind {
             ListType::Unordered => {
-                if line.starts_with("- ") || line.starts_with("* ") {
+                println!("Parsed: {}", line);
+                if line.starts_with("- ") || line.starts_with("* ") || line.starts_with("+ ") {
                     line[2..].to_string()
                 } else {
                     line.to_string()
